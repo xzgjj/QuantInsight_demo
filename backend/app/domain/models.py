@@ -89,3 +89,66 @@ class Task(TimestampMixin, Base):
     result: Mapped[dict | None] = mapped_column(JSON)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DocumentChunk(TimestampMixin, Base):
+    __tablename__ = "document_chunks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), index=True)
+    page_start: Mapped[int] = mapped_column(Integer)
+    page_end: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    chunk_hash: Mapped[str] = mapped_column(String(128), unique=True)
+    parser: Mapped[str] = mapped_column(String(64))
+    confidence: Mapped[float] = mapped_column(Numeric(5, 4))
+
+
+class DocumentTable(TimestampMixin, Base):
+    __tablename__ = "document_tables"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id"), index=True)
+    page: Mapped[int] = mapped_column(Integer)
+    table_json: Mapped[dict] = mapped_column(JSON)
+    parser: Mapped[str] = mapped_column(String(64))
+    confidence: Mapped[float] = mapped_column(Numeric(5, 4))
+
+
+class MetricObservation(TimestampMixin, Base):
+    __tablename__ = "metric_observations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticker_id: Mapped[int | None] = mapped_column(ForeignKey("tickers.id"), index=True)
+    metric_name: Mapped[str] = mapped_column(String(128), index=True)
+    value: Mapped[float] = mapped_column(Numeric(20, 6))
+    unit: Mapped[str] = mapped_column(String(32))
+    period: Mapped[str] = mapped_column(String(32))
+    source_document_id: Mapped[int | None] = mapped_column(ForeignKey("documents.id"), index=True)
+    page: Mapped[int | None] = mapped_column(Integer)
+    confidence: Mapped[float] = mapped_column(Numeric(5, 4))
+    data_version: Mapped[str] = mapped_column(String(64))
+
+
+class EvidenceItem(TimestampMixin, Base):
+    __tablename__ = "evidence_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    evidence_type: Mapped[str] = mapped_column(String(64), index=True)
+    source: Mapped[str] = mapped_column(String(128))
+    source_id: Mapped[str] = mapped_column(String(128), index=True)
+    locator: Mapped[dict] = mapped_column(JSON)
+    quote: Mapped[str] = mapped_column(Text)
+    evidence_hash: Mapped[str] = mapped_column(String(128), unique=True)
+
+
+class ProviderRun(TimestampMixin, Base):
+    __tablename__ = "provider_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    provider: Mapped[str] = mapped_column(String(64), index=True)
+    endpoint: Mapped[str] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    request_hash: Mapped[str] = mapped_column(String(128), index=True)
+    error: Mapped[dict | None] = mapped_column(JSON)

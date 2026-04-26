@@ -47,6 +47,33 @@ class InMemoryTaskStore:
         self._tasks[task.task_id] = task
         return task
 
+    def create_document_parse_task(self, filename: str) -> TaskRecord:
+        task = TaskRecord(task_id=str(uuid.uuid4()), task_type="document_parse")
+        task.events.extend(
+            [
+                TaskEvent("stage", {"stage": "queued", "progress": 5, "filename": filename}),
+                TaskEvent("stage", {"stage": "validating", "progress": 20}),
+                TaskEvent("stage", {"stage": "extracting_text", "progress": 45}),
+                TaskEvent(
+                    "warning",
+                    {
+                        "code": "MOCK_PARSER",
+                        "message": "Stage 2 parser preserves evidence plumbing, not final layout.",
+                    },
+                ),
+                TaskEvent(
+                    "partial",
+                    {"message": "Text chunks and metric candidates are available."},
+                ),
+                TaskEvent("result", {"summary": "Document parsing completed."}),
+                TaskEvent("done", {"status": "completed", "progress": 100}),
+            ]
+        )
+        task.status = "completed"
+        task.progress = 100
+        self._tasks[task.task_id] = task
+        return task
+
     def get(self, task_id: str) -> TaskRecord | None:
         return self._tasks.get(task_id)
 

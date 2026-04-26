@@ -21,6 +21,7 @@ Every step must expose status, source, confidence, and next action. If the syste
 | Microsoft Qlib | Research-to-backtest workflow, data versioning, model experiment discipline, risk/return evaluation. | Heavy ML pipeline before daily-data strategy templates are stable. |
 | vectorbt | Fast exploratory backtesting, signal-to-portfolio loop, metrics/trades/logs as first-class outputs. | Over-optimizing for high-dimensional quant experiments in the first stage. |
 | Bloomberg / Koyfin / TradingView | Dense financial UI, watchlists, comparable company views, chart/table ergonomics. | Terminal breadth, paid-data assumptions, or trading execution workflows. |
+| Fiscal.ai / Fintool | Question-first AI research, source-backed answers, filing/call/document retrieval, saved dashboards and alerts. | Opaque AI summaries that cannot be traced to evidence rows. |
 
 Implementation references used in this blueprint:
 
@@ -29,8 +30,120 @@ Implementation references used in this blueprint:
 - FinGPT product and ecosystem overview: https://fingpt.io/
 - Microsoft Qlib research overview: https://www.microsoft.com/en-us/research/publication/qlib-an-ai-oriented-quantitative-investment-platform/
 - vectorbt documentation: https://vectorbt.dev/
+- OpenBB Workspace docs: https://docs.openbb.co/workspace
+- Bloomberg research workflow: https://professional.bloomberg.com/products/bloomberg-terminal/research/
+- Fiscal.ai product reference: https://fiscal.ai/
+- Fintool AI equity research reference: https://fintool.com/
+- Koyfin product reference: https://www.koyfin.com/
 
-## 3. Primary User Journeys
+## 3. Product UX Reference Model
+
+The product should not look like a marketing page or a sparse demo. It should feel like a compact research workspace with a clear operating path.
+
+Reference products and what they imply for QuantInsight:
+
+| Reference | UX lesson | QuantInsight decision |
+|---|---|---|
+| OpenBB Workspace | A research workspace must let users compose data widgets and move from data to shared reports. | Use modular panels, not decorative sections. Every panel should map to an API/tool or report artifact. |
+| Fiscal.ai / FinChat | Company research works best when traditional data tables, first-party IR content, and AI summaries live in the same context. | Keep AI guidance on the company page, with visible suggested tasks and evidence requirements. |
+| Fintool | AI equity workflows should begin with natural-language questions, document scope, and source-backed answers. | Merge the AI research actions into one assistant panel: select task, confirm evidence scope, generate result, add to report. |
+| Bloomberg / Koyfin | Financial users scan dense snapshots, watchlists, and comparable facts before reading long text. | Put company identity, price, metrics, catalysts, filings, and audit metadata above narrative. |
+| FinRobot / financial agent papers | AI equity research needs structured company analysis, valuation/risk modules, and numerical support. | AI actions must be task-based: summarize, compare, find missing evidence, draft report, prepare backtest. |
+
+### Layout Ratio Rules
+
+The first implementation should follow these measurable layout constraints:
+
+| Surface | Desktop grid | Mobile grid | Notes |
+|---|---|---|---|
+| App shell | `max-width: 1280px`, 24px outer padding | 16px outer padding | Keep top navigation stable. |
+| Home hero | `main 68% / queue 32%` | single column | Hero height should be 260-340px, not full-screen. |
+| Home body | `content 72% / watchlist 28%` | single column | Recommended companies should appear before generic tools. |
+| Company header | `identity 42% / metrics 58%` | identity then metrics | Do not hide Apple/company identity behind generic text. |
+| Company research body | `research 68% / AI+audit 32%` | single column | AI is a work panel, not a floating chatbot. |
+| Filing page | `document rail 28% / extraction 72%` | single column | Timeline, candidates, and evidence stay visible together. |
+
+### First Screen Wireframes
+
+Home, desktop:
+
+```text
+1280 container
+┌──────────────────────────────────────────────────────────────┐
+│  QuantInsight / 投研工作台              中文 EN   登录        │ 64
+├──────────────────────────────────────────────────────────────┤
+│  68%: search + research thesis        │ 32%: 今日研究队列     │ 300
+├───────────────────────────────────────┴──────────────────────┤
+│  72%: 推荐研究公司 + 工作入口         │ 28%: 我的关注 + AI说明│
+└──────────────────────────────────────────────────────────────┘
+```
+
+Home workflow card content requirements:
+
+Each workflow card must be written as a concrete task surface, not as a simple navigation tile.
+
+```text
+Title      -> one workflow name
+Summary    -> what the user can complete
+Flow text  -> three plain-text steps, not independent mini buttons
+Target     -> one card-level destination page or tool
+Feedback   -> visible state after action starts
+Visual     -> icon container + hover motion + optional data sparkline
+```
+
+Current task card model:
+
+| Card | Summary requirement | Plain flow text |
+|---|---|---|
+| 公司研究 | Company identity, business structure, key metrics, catalysts, and comparable definitions. | 确认公司身份 / 查看指标来源 / 生成 AI 摘要 |
+| 财报解析 | Upload validation, duplicate detection, chunks, metric candidates, low-confidence fields, and page evidence. | 校验文件 / 提取指标 / 回到原文页码 |
+| 市场扫描 | Natural-language screening, threshold confirmation, candidate reasons, and exclusions. | 解析条件 / 确认阈值 / 输出候选池 |
+| 回测实验室 | Hypothesis-to-template conversion, costs, trades, and bias checks. | 选择模板 / 设置成本 / 复核偏差 |
+
+All production pages should share this visual grammar:
+
+- top app shell with language and login;
+- task cards with icon, summary, and plain flow text; the whole card is the only click target;
+- at least one visual data element per research surface, such as sparkline, timeline, metric card, or evidence table;
+- hover motion limited to `translateY(-2px)` or arrow movement, avoiding decorative animation that distracts from research work.
+- page-specific controls must have visible state feedback; if a button appears on a page, it either navigates, changes state, or starts a mock/API task.
+
+### Visual Review Targets
+
+QuantInsight should be judged against these concrete visual targets before each stage commit:
+
+| Area | Target | Current stage-2 expectation |
+|---|---|---|
+| Density | More information than a landing page, less than a terminal wall. | First screen shows identity, metrics, workflow status, AI task, audit, and next actions. |
+| Proportion | Stable two-column desktop ratios with one-column mobile fallback. | Home `68/32`, company `42/58` header and `68/32` body, filing `28/72`. |
+| Evidence visibility | A fact can be traced without leaving the current path. | Filing page shows parser, data version, metric table, page number, confidence, and selected reference state. |
+| AI interaction | AI is a workflow panel, not four disconnected buttons. | One AI assistant panel controls task selection, evidence scope, generation, and report handoff. |
+| Supporting context | Users see comparable reports and relevant news near the evidence path. | Filing rail includes report recommendations and company/industry news with selected state feedback. |
+| Visual hierarchy | Primary thesis should lead; supporting process labels must not compete with it. | Home removes the three background process cards and uses “从问题进入，形成可追溯的研究结论” as the first-screen headline. |
+| Filing analytics | Filing evidence should resemble an institutional report metric pack, not a three-number demo. | Stage 2 mock includes revenue, gross margin, operating income, operating margin, net income, diluted EPS, operating cash flow, and free cash flow. |
+
+## 4. Primary User Journeys
+
+Company page, desktop:
+
+```text
+1280 container
+┌──────────────────────────────────────────────────────────────┐
+│  QuantInsight / 投研工作台              中文 EN   登录        │ 64
+├──────────────────────────────────────────────────────────────┤
+│  42%: AAPL 苹果公司 identity/price     │ 58%: key metrics     │ 220
+├────────────────────────────────────────┬─────────────────────┤
+│  68%: thesis, catalysts, filings,      │ 32%: AI task panel   │
+│       peer/backtest/report modules     │      + audit rail    │
+└────────────────────────────────────────┴─────────────────────┘
+```
+
+Interaction state rules:
+
+- Search has four states: empty, suggestions, selected entity, no result.
+- Company panels have five states: loading, partial, warning, empty evidence, complete.
+- AI work panel has five states: choose task, confirm evidence scope, running, review result, add to report.
+- Login can remain a UI entry in this stage, but it must reserve the future authenticated state: user avatar, saved watchlist, research basket.
 
 ### 3.1 Company Research
 
@@ -107,7 +220,7 @@ The MVP backtest remains daily-frequency and template-based. No intraday, option
 4. Alerts can be created from price, volume, filings, metric thresholds, or saved screens.
 5. Every alert execution records input data version and trigger reason.
 
-## 4. API Contract Principles
+## 5. API Contract Principles
 
 All API responses use:
 
@@ -144,7 +257,7 @@ Errors should keep the same envelope shape when possible:
 }
 ```
 
-## 5. MVP Endpoint Map
+## 6. MVP Endpoint Map
 
 | Area | Endpoint | Purpose |
 |---|---|---|
@@ -169,7 +282,7 @@ Next endpoint group after Stage 1:
 | Reports | `POST /api/v1/research-baskets` | Save evidence and analysis artifacts. |
 | Alerts | `POST /api/v1/alerts` | Create alert rule. |
 
-## 6. Data Model Direction
+## 7. Data Model Direction
 
 Stage 1 already has:
 
@@ -211,7 +324,7 @@ Stage 4-5 should add:
 | `alerts` | `rule_type`, `rule_json`, `status`, `last_checked_at`. |
 | `alert_events` | `alert_id`, `triggered_at`, `reason`, `data_version`, `payload_json`. |
 
-## 7. Internal Service Boundaries
+## 8. Internal Service Boundaries
 
 Keep the MVP as a modular monolith:
 
@@ -244,7 +357,7 @@ Backtest rule:
 Parameters -> data availability -> signal generation -> portfolio simulation -> bias/cost checks -> result
 ```
 
-## 8. Callable Tool Plan
+## 9. Callable Tool Plan
 
 | Tool | Stage | Purpose |
 |---|---|---|
@@ -261,7 +374,7 @@ Parameters -> data availability -> signal generation -> portfolio simulation -> 
 
 Tool calls must be logged with input, output summary, evidence ids, status, latency, model, token usage where relevant, and disclaimer status.
 
-## 9. Stage Gates
+## 10. Stage Gates
 
 ### Stage 1: MVP Base
 
@@ -284,6 +397,32 @@ Acceptance:
 - Parse task emits observable stages.
 - Extracted metrics link to document page and parser confidence.
 - Provider failures degrade section-by-section.
+
+Stage 2 MVP implementation policy:
+
+- Keep parser integration behind a `documents` service boundary.
+- Use a mock parser for API/UX/audit plumbing until real PDF parser benchmarks are run.
+- Treat PyMuPDF as the likely first text/layout provider, pdfplumber as the likely first table provider, Camelot as a table fallback, and PaddleOCR as a later OCR provider for scanned filings.
+- Store parser name, confidence, page locator, chunk hash, and source text with every extracted candidate.
+- Reject unsupported files before task execution and deduplicate by SHA-256 hash.
+
+Stage 2 implemented endpoint set:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/documents` | Upload, validate, hash, deduplicate, parse, chunk, and extract metric candidates. |
+| `GET /api/v1/documents/{document_id}` | Retrieve document metadata and parse summary. |
+| `GET /api/v1/documents/{document_id}/chunks` | Retrieve page-aware text chunks. |
+| `GET /api/v1/documents/{document_id}/metrics` | Retrieve metric candidates with page and confidence. |
+
+Stage 2 implemented UX surface:
+
+| Surface | Implemented behavior |
+|---|---|
+| Home | Chinese-first headline, search entry, research queue, recommended companies, watchlist, and single-click workflow cards. |
+| Company | Snapshot, research brief, catalyst cards, AI task panel, filing evidence path, backtest path, and audit rail. |
+| Filings | Upload state, parser timeline, low-confidence warning, 8-metric candidate table, evidence preview, wide key data glyph, report recommendations, and company/industry news. |
+| Backtests | Template switch, cost switch, bias checks, and visible trade output. |
 
 ### Stage 3: AI Copilot and Evidence Chain
 
@@ -311,7 +450,7 @@ Acceptance:
 - Alerts can be paused and explain trigger reasons.
 - Every triggered alert records data version and source metadata.
 
-## 10. Validation Program Requirements
+## 11. Validation Program Requirements
 
 The automated validation script must:
 
@@ -324,7 +463,7 @@ The automated validation script must:
 - optionally run Alembic upgrade/downgrade checks when services are available;
 - stop on first hard failure and print the failing phase.
 
-## 11. Review Loop
+## 12. Review Loop
 
 Each implementation stage must go through three reviews:
 

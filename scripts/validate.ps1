@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("stage1", "all")]
+    [ValidateSet("stage1", "stage2", "all")]
     [string]$Phase = "stage1",
     [switch]$SkipInstall,
     [switch]$SkipDocker,

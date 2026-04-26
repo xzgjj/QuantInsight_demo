@@ -25,8 +25,8 @@ describe("SnapshotPanel", () => {
       />
     );
 
-    expect(screen.getByText("AAPL · Apple Inc.")).toBeInTheDocument();
+    expect(screen.getByText("苹果公司")).toBeInTheDocument();
     expect(screen.getByText("189.12")).toBeInTheDocument();
-    expect(screen.getByText("Gross Margin")).toBeInTheDocument();
+    expect(screen.getByText("毛利率")).toBeInTheDocument();
   });
 });
