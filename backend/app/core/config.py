@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     )
     redis_url: str = "redis://localhost:6379/0"
     provider_mode: str = "mock"
+    filing_provider: str = "mock"
+    sec_user_agent: str = "QuantInsight local research prototype contact@example.com"
+    sec_fallback_to_mock: bool = True
     disclaimer_required: bool = True
 
 

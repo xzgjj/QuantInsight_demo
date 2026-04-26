@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, CheckCircle2, FileText, MessageSquare, Send } from "lucide-react";
+import { Bot, CheckCircle2, FileText, Plus, Send } from "lucide-react";
 
 const tasks = [
   {
@@ -41,47 +41,65 @@ export function AiResearchPanel() {
         <h2 className="text-base font-semibold text-ink">AI 研究助手</h2>
       </div>
 
-      <div className="mt-4 rounded-md border border-line bg-panel p-3 text-sm text-graphite">
-        <MessageSquare aria-hidden="true" className="mb-2 h-4 w-4" />
-        这不是四个孤立按钮，而是一条 AI 工作流：先选择任务，再确认证据范围，最后生成可加入报告的结果。
-      </div>
-
-      <div className="mt-4 grid gap-2">
-        {tasks.map((task) => (
+      <div className="mt-4 grid grid-cols-[44px_1fr] overflow-hidden rounded-md border border-line bg-panel">
+        <div className="border-r border-line bg-white p-2">
           <button
-            className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${
-              activeTask.id === task.id
-                ? "border-ink bg-ink text-white"
-                : "border-line bg-white text-ink hover:border-ink"
-            }`}
-            key={task.id}
-            onClick={() => {
-              setActiveTask(task);
-              setIsGenerated(false);
-            }}
+            aria-label="添加 AI 任务"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-line text-graphite hover:border-ink hover:text-ink"
             type="button"
           >
-            {task.label}
-            {activeTask.id === task.id ? <CheckCircle2 aria-hidden="true" className="h-4 w-4" /> : null}
+            <Plus aria-hidden="true" className="h-4 w-4" />
           </button>
-        ))}
-      </div>
-
-      <div className="mt-4 rounded-md border border-line bg-panel p-3">
-        <div className="text-xs text-graphite">当前任务</div>
-        <div className="mt-1 text-sm font-semibold text-ink">{activeTask.prompt}</div>
-        <div className="mt-3 flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2">
-          <span className="flex-1 text-sm text-graphite">证据范围：公司快照 + 财报候选 + 审计栏</span>
-          <FileText aria-hidden="true" className="h-4 w-4 text-graphite" />
+          <div className="mt-3 grid gap-2">
+            {tasks.map((task) => (
+              <button
+                aria-label={task.label}
+                className={`flex h-8 w-8 items-center justify-center rounded-md border text-xs font-semibold transition ${
+                  activeTask.id === task.id
+                    ? "border-ink bg-ink text-white"
+                    : "border-line bg-panel text-graphite hover:border-ink"
+                }`}
+                key={task.id}
+                onClick={() => {
+                  setActiveTask(task);
+                  setIsGenerated(false);
+                }}
+                type="button"
+              >
+                {task.label.slice(0, 1)}
+              </button>
+            ))}
+          </div>
         </div>
-        <button
-          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-3 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
-          onClick={() => setIsGenerated(true)}
-          type="button"
-        >
-          <Send aria-hidden="true" className="h-4 w-4" />
-          生成结果
-        </button>
+
+        <div className="p-3">
+          <div className="rounded-md border border-line bg-white p-3 text-sm leading-6 text-graphite">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-ink">{activeTask.label}</span>
+              <CheckCircle2 aria-hidden="true" className="h-4 w-4 text-positive" />
+            </div>
+            <p className="mt-2">
+              左侧 “+” 添加任务，下面切换摘要、缺失证据、同行和报告功能；右侧只保留当前对话上下文。
+            </p>
+          </div>
+
+          <div className="mt-3 rounded-md border border-line bg-panel p-3">
+            <div className="text-xs text-graphite">当前任务</div>
+            <div className="mt-1 text-sm font-semibold text-ink">{activeTask.prompt}</div>
+            <div className="mt-3 flex items-center gap-2 rounded-md border border-line bg-white px-3 py-2">
+              <span className="flex-1 text-sm text-graphite">证据范围：公司快照 + 财报候选 + 审计栏</span>
+              <FileText aria-hidden="true" className="h-4 w-4 text-graphite" />
+            </div>
+            <button
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-3 py-2 text-sm font-medium text-white transition hover:-translate-y-0.5"
+              onClick={() => setIsGenerated(true)}
+              type="button"
+            >
+              <Send aria-hidden="true" className="h-4 w-4" />
+              生成结果
+            </button>
+          </div>
+        </div>
       </div>
 
       {isGenerated ? (

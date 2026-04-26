@@ -100,3 +100,43 @@ def test_document_upload_rejects_unsupported_file_type():
 
     assert response.status_code == 400
     assert response.json()["detail"]["code"] == "UNSUPPORTED_FILE_TYPE"
+
+
+def test_filing_fetch_facts_chart_review_and_internal_notes():
+    filings_response = client.get("/api/v1/documents/filings/AAPL")
+
+    assert filings_response.status_code == 200
+    filings = filings_response.json()["data"]
+    assert filings[0]["form_type"] == "10-K"
+    assert filings[0]["source"] == "sec-edgar-mock"
+
+    fetch_response = client.post("/api/v1/documents/filings/AAPL/fetch")
+    assert fetch_response.status_code == 200
+    fetched = fetch_response.json()["data"]
+    assert fetched["filing"]["accession_number"] == "0000320193-25-000079"
+    assert fetched["fact_count"] >= 7
+    assert fetched["task_id"]
+
+    facts_response = client.get("/api/v1/documents/filings/AAPL/facts")
+    assert facts_response.status_code == 200
+    fact_names = {fact["metric_name"] for fact in facts_response.json()["data"]}
+    assert "free_cash_flow" in fact_names
+    assert "operating_income" in fact_names
+
+    review_response = client.post(
+        "/api/v1/documents/chart-reviews",
+        json={
+            "symbol": "AAPL",
+            "metric_name": "free_cash_flow",
+            "status": "accepted",
+            "reviewer": "human",
+            "note": "FCF trend reconciles with operating cash flow minus capex.",
+            "evidence_ids": ["fact:AAPL:free_cash_flow"],
+        },
+    )
+    assert review_response.status_code == 200
+    assert review_response.json()["data"]["status"] == "accepted"
+
+    notes_response = client.get("/api/v1/documents/internal-notes/AAPL")
+    assert notes_response.status_code == 200
+    assert notes_response.json()["data"][0]["source_owner"] == "internal-research"

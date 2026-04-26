@@ -152,3 +152,61 @@ class ProviderRun(TimestampMixin, Base):
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     request_hash: Mapped[str] = mapped_column(String(128), index=True)
     error: Mapped[dict | None] = mapped_column(JSON)
+
+
+class FilingSource(TimestampMixin, Base):
+    __tablename__ = "filing_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticker_id: Mapped[int | None] = mapped_column(ForeignKey("tickers.id"), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    cik: Mapped[str] = mapped_column(String(32), index=True)
+    form_type: Mapped[str] = mapped_column(String(32), index=True)
+    accession_number: Mapped[str] = mapped_column(String(64), unique=True)
+    filing_date: Mapped[str] = mapped_column(String(32))
+    report_period: Mapped[str] = mapped_column(String(32))
+    source: Mapped[str] = mapped_column(String(64))
+    source_url: Mapped[str] = mapped_column(Text)
+    data_version: Mapped[str] = mapped_column(String(64))
+
+
+class FinancialFact(TimestampMixin, Base):
+    __tablename__ = "financial_facts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticker_id: Mapped[int | None] = mapped_column(ForeignKey("tickers.id"), index=True)
+    filing_source_id: Mapped[int | None] = mapped_column(
+        ForeignKey("filing_sources.id"), index=True
+    )
+    metric_name: Mapped[str] = mapped_column(String(128), index=True)
+    label: Mapped[str] = mapped_column(String(255))
+    value: Mapped[float] = mapped_column(Numeric(20, 6))
+    unit: Mapped[str] = mapped_column(String(32))
+    period: Mapped[str] = mapped_column(String(32))
+    fiscal_year: Mapped[int | None] = mapped_column(Integer)
+    confidence: Mapped[float] = mapped_column(Numeric(5, 4))
+    source_url: Mapped[str] = mapped_column(Text)
+    data_version: Mapped[str] = mapped_column(String(64))
+
+
+class ChartReview(TimestampMixin, Base):
+    __tablename__ = "chart_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticker_id: Mapped[int | None] = mapped_column(ForeignKey("tickers.id"), index=True)
+    metric_name: Mapped[str] = mapped_column(String(128), index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    reviewer: Mapped[str] = mapped_column(String(32), index=True)
+    note: Mapped[str] = mapped_column(Text)
+    evidence_ids: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class InternalResearchNote(TimestampMixin, Base):
+    __tablename__ = "internal_research_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticker_id: Mapped[int | None] = mapped_column(ForeignKey("tickers.id"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    source_owner: Mapped[str] = mapped_column(String(128))
+    stance: Mapped[str] = mapped_column(Text)
+    evidence_ids: Mapped[list] = mapped_column(JSON, default=list)

@@ -36,6 +36,17 @@ Implementation references used in this blueprint:
 - Fintool AI equity research reference: https://fintool.com/
 - Koyfin product reference: https://www.koyfin.com/
 
+Current external data/API findings as of 2026-04-26:
+
+| Source | Can use now | QuantInsight decision |
+|---|---|---|
+| SEC EDGAR APIs | Yes, no API key for submissions and XBRL company facts; server-side calls are required because `data.sec.gov` does not support browser CORS. | Implemented optional backend provider behind `QI_FILING_PROVIDER=sec`, with mock fallback for local tests. |
+| Alpha Vantage | API key required for production usage; official documentation lists stock, fundamentals, news, economic data, and an official MCP entry. | Keep as a planned provider/MCP adapter; do not hardwire until credentials and rate limits are configured. |
+| Financial Modeling Prep | API key required; useful for income statement, balance sheet, cash flow, TTM, growth and as-reported statements. | Planned provider for paid/credentialed financial statements and quote coverage. |
+| OpenBB ODP | Provides a unified API approach across REST, Python, Jupyter, Excel and related workflows. | Continue to mirror the provider-router-normalizer pattern instead of coupling the UI to a single vendor. |
+
+Local connector status: this Codex session only exposes GitHub and Figma app connectors. No finance MCP connector is installed in the local MCP tool list, so direct MCP invocation is not available here. The repo-side work is to expose provider adapters and configuration so Alpha Vantage/OpenBB/FMP MCP or REST providers can be added without changing page code.
+
 ## 3. Product UX Reference Model
 
 The product should not look like a marketing page or a sparse demo. It should feel like a compact research workspace with a clear operating path.
@@ -107,6 +118,38 @@ All production pages should share this visual grammar:
 - at least one visual data element per research surface, such as sparkline, timeline, metric card, or evidence table;
 - hover motion limited to `translateY(-2px)` or arrow movement, avoiding decorative animation that distracts from research work.
 - page-specific controls must have visible state feedback; if a button appears on a page, it either navigates, changes state, or starts a mock/API task.
+
+### Feedback-Driven Interaction Corrections
+
+The product must not preload rich data on secondary pages as if the user has already chosen a research object. This makes the system feel like a static demo and hides the actual workflow.
+
+Global rule for secondary pages:
+
+```text
+Empty state -> Search / recommended / watchlist select -> Entity context -> Data fetch -> Evidence / calculation / report actions
+```
+
+Concrete decisions:
+
+| Surface | Default state | User action | Loaded state |
+|---|---|---|---|
+| Company page | The URL symbol is the selected entity, but a company switcher appears between the top snapshot and research brief. | Search, click recommended company, or click watchlist company. | Snapshot, research brief, filings, AI, audit and report draft refresh under the selected symbol. |
+| Filing page | No metric table, chart, or filing list is shown by default. | User searches a company or clicks left-side recommended/watchlist company. | Filing source list and parse timeline appear; metrics and chart review appear only after a filing is selected. |
+| Backtest page | No trade table is shown by default. | User selects company/universe, then template, cost model and date range. | Bias checks and trades appear after the run task completes. |
+| AI panel | No four disconnected action buttons. | User uses the left `+` rail to add/switch tasks. | The right conversation pane keeps one active task, evidence scope, run button and result. |
+
+Filing page copy and layout rule:
+
+- Page title is `财报审查`.
+- The former `抓取最新财报` button becomes a search-and-fetch control where users type a company or ticker.
+- The left rail starts with `公司推荐`, mixing recommended and watchlist companies.
+- `解析时间线` is always visible as the state spine, but metric candidates, chart review, evidence preview and key data glyph stay hidden until a filing is selected.
+
+Company page insertion rule:
+
+- Add a `公司切换` band between the top company snapshot and `研究摘要`.
+- The band contains search intent text, recommended companies and watchlist companies.
+- Clicking another company navigates to `/company/{symbol}` and reuses the same API contract.
 
 ### Visual Review Targets
 
@@ -279,7 +322,12 @@ Next endpoint group after Stage 1:
 | Documents | `GET /api/v1/documents/{id}/metrics` | Extracted metric candidates. |
 | Screeners | `POST /api/v1/screeners/parse` | NL query to editable filter draft. |
 | Screeners | `POST /api/v1/screeners/run` | Run confirmed filter set. |
+| Auth | `POST /api/v1/auth/login` | Validate credentials and create an auditable session. |
+| Auth | `POST /api/v1/auth/logout` | Revoke the current refresh/session token. |
+| Calculations | `POST /api/v1/calculations/run` | Run valuation, ratio, growth, peer percentile, or backtest-prep calculations from evidence-backed inputs. |
 | Reports | `POST /api/v1/research-baskets` | Save evidence and analysis artifacts. |
+| Reports | `POST /api/v1/reports/drafts` | Create a report draft from a research basket and outline. |
+| Reports | `POST /api/v1/reports/{draft_id}/generate` | Generate citation-backed report sections and record citation checks. |
 | Alerts | `POST /api/v1/alerts` | Create alert rule. |
 
 ## 7. Data Model Direction
@@ -315,12 +363,18 @@ Stage 4-5 should add:
 
 | Table | Key fields |
 |---|---|
+| `users` | `email`, `password_hash`, `display_name`, `status`, `last_login_at`, `created_at`. |
+| `sessions` | `user_id`, `refresh_token_hash`, `expires_at`, `ip_hash`, `user_agent`. |
+| `research_projects` | `user_id`, `name`, `base_symbol`, `status`, `created_at`, `updated_at`. |
 | `screens` | `name`, `filter_json`, `universe`, `created_at`. |
 | `screen_runs` | `screen_id`, `status`, `result_count`, `data_version`, `warnings`. |
+| `calculation_runs` | `project_id`, `symbol`, `calculation_type`, `input_json`, `formula_json`, `result_json`, `evidence_ids`, `data_version`. |
 | `backtest_runs` | `strategy`, `params_json`, `metrics_json`, `cost_model_json`, `bias_checks_json`, `data_version`. |
 | `backtest_trades` | `run_id`, `symbol`, `side`, `quantity`, `price`, `fee`, `executed_at`. |
 | `research_baskets` | `name`, `description`, `created_at`. |
 | `research_items` | `basket_id`, `item_type`, `payload_json`, `evidence_ids`. |
+| `report_drafts` | `project_id`, `title`, `status`, `outline_json`, `content_markdown`, `citation_ids`, `export_uri`. |
+| `report_generation_runs` | `draft_id`, `model`, `tool_calls`, `input_evidence_ids`, `output_summary`, `citation_check_json`. |
 | `alerts` | `rule_type`, `rule_json`, `status`, `last_checked_at`. |
 | `alert_events` | `alert_id`, `triggered_at`, `reason`, `data_version`, `payload_json`. |
 
@@ -367,6 +421,10 @@ Parameters -> data availability -> signal generation -> portfolio simulation -> 
 | `get_provider_health` | 1 | Runtime diagnostics. |
 | `get_document_chunks` | 2 | Filing RAG retrieval. |
 | `get_metric_observations` | 2 | Auditable financial metric lookup. |
+| `list_filings` | 3 | Retrieve filing catalog from SEC-like or exchange providers. |
+| `fetch_filing_facts` | 3 | Normalize filing facts into metric rows with source URLs. |
+| `create_chart_review` | 3 | Attach human, AI, or internal review status to a metric chart. |
+| `get_internal_research_notes` | 3 | Add internal context without overwriting public filing facts. |
 | `parse_screen_query` | 4 | NL to filter draft. |
 | `run_screen` | 4 | Candidate generation. |
 | `create_report_draft` | 4 | Evidence-backed report generation. |
@@ -432,6 +490,35 @@ Acceptance:
 - Tool calls are allowlisted.
 - AI audit records are queryable.
 - No answer gives personalized buy/sell advice.
+- Filing entry is fetch-first, upload-second: public filings are resolved from provider metadata before manual uploads are used.
+- Financial facts keep source URL, period, unit, confidence, and data version.
+- Chart review records distinguish human, AI, and internal research sources.
+- Internal notes are research context and cannot override public filing facts.
+
+Stage 3 implemented endpoint set:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/documents/filings/{symbol}` | List SEC-like filings for a company. |
+| `POST /api/v1/documents/filings/{symbol}/fetch` | Select a filing and create a fetch task. |
+| `GET /api/v1/documents/filings/{symbol}/facts` | Return normalized filing facts for chart review. |
+| `POST /api/v1/documents/chart-reviews` | Create a metric chart review record. |
+| `GET /api/v1/documents/internal-notes/{symbol}` | Return internal research context. |
+
+Provider implementation status:
+
+- Default mode remains deterministic `sec-edgar-mock` for tests and screenshots.
+- `QI_FILING_PROVIDER=sec` switches filing list and XBRL facts to the SEC EDGAR live provider.
+- `QI_SEC_USER_AGENT` must be set to a real product/contact string before shared usage.
+- `QI_SEC_FALLBACK_TO_MOCK=true` keeps UI smoke tests usable if live SEC calls fail.
+
+Stage 3 modeling granularity:
+
+```text
+Source -> Fact -> Metric -> Chart Review -> Thesis -> Model -> Evidence Chain
+```
+
+Every stage 3 output must identify whether it came from public filings, human review, AI review, or internal research.
 
 ### Stage 4: Screener, Peers, Report
 

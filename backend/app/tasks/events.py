@@ -74,6 +74,24 @@ class InMemoryTaskStore:
         self._tasks[task.task_id] = task
         return task
 
+    def create_filing_fetch_task(self, symbol: str, source: str) -> TaskRecord:
+        task = TaskRecord(task_id=str(uuid.uuid4()), task_type="filing_fetch")
+        task.events.extend(
+            [
+                TaskEvent("stage", {"stage": "queued", "progress": 5, "symbol": symbol}),
+                TaskEvent("stage", {"stage": "resolving_entity", "progress": 20}),
+                TaskEvent("stage", {"stage": "fetching_filing_index", "progress": 45}),
+                TaskEvent("partial", {"message": f"Fetched filing catalog from {source}."}),
+                TaskEvent("stage", {"stage": "normalizing_facts", "progress": 75}),
+                TaskEvent("result", {"summary": "Filing facts are ready for chart review."}),
+                TaskEvent("done", {"status": "completed", "progress": 100}),
+            ]
+        )
+        task.status = "completed"
+        task.progress = 100
+        self._tasks[task.task_id] = task
+        return task
+
     def get(self, task_id: str) -> TaskRecord | None:
         return self._tasks.get(task_id)
 

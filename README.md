@@ -134,6 +134,12 @@ assets/product-mockups/
 
 具体实施阶段、环境基线、接口验收和 POC 任务不放在 README 中，应以 `implementation_plan.md` 和架构报告为准。
 
+当前数据源状态：
+
+- 默认仍使用 mock provider，保证本地测试和截图稳定。
+- 财报抓取已预留 SEC EDGAR live provider：设置 `QI_FILING_PROVIDER=sec`，并把 `QI_SEC_USER_AGENT` 改成真实产品/联系人后可走后端抓取。
+- 当前 Codex 本地连接器没有财经 MCP，后续 Alpha Vantage / FMP / OpenBB MCP 或 REST 接入应放在 provider 层，不直接耦合前端页面。
+
 ## 工程原则
 
 - 0-1 阶段默认模块化单体。

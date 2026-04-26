@@ -3,7 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.core.config import get_settings
 from app.core.envelope import ApiMeta, ok
+from app.documents.filings import ChartReviewRequest, filing_provider, get_filing_provider
 from app.documents.service import DocumentValidationError, document_store
 from app.tasks.events import task_store
 
@@ -68,6 +70,111 @@ async def upload_document(
     )
 
 
+@router.get("/filings/{symbol}")
+async def list_filings(symbol: str):
+    provider, warnings = _active_filing_provider()
+    try:
+        filings = provider.list_filings(symbol)
+    except Exception as exc:
+        provider, warnings = _fallback_filing_provider(exc)
+        filings = provider.list_filings(symbol)
+    if not filings:
+        raise HTTPException(status_code=404, detail="No filings found for symbol.")
+    return ok(
+        [filing.model_dump() for filing in filings],
+        meta=ApiMeta(
+            source=provider.source,
+            data_version=provider.data_version,
+            warnings=warnings,
+        ),
+    )
+
+
+@router.post("/filings/{symbol}/fetch")
+async def fetch_filing(symbol: str, form_type: str = "10-K"):
+    provider, warnings = _active_filing_provider()
+    try:
+        filing = provider.select_filing(symbol, form_type=form_type)
+        facts = provider.get_facts(symbol)
+    except Exception as exc:
+        provider, warnings = _fallback_filing_provider(exc)
+        filing = provider.select_filing(symbol, form_type=form_type)
+        facts = provider.get_facts(symbol)
+    if filing is None:
+        raise HTTPException(status_code=404, detail="No filing found for symbol.")
+    task = task_store.create_filing_fetch_task(symbol.upper(), provider.source)
+    return ok(
+        {
+            "filing": filing.model_dump(),
+            "task_id": task.task_id,
+            "fact_count": len(facts),
+            "review_state": "pending",
+        },
+        meta=ApiMeta(
+            source=provider.source,
+            data_version=provider.data_version,
+            warnings=warnings,
+        ),
+    )
+
+
+@router.get("/filings/{symbol}/facts")
+async def get_filing_facts(symbol: str):
+    provider, warnings = _active_filing_provider()
+    try:
+        facts = provider.get_facts(symbol)
+    except Exception as exc:
+        provider, warnings = _fallback_filing_provider(exc)
+        facts = provider.get_facts(symbol)
+    if not facts:
+        raise HTTPException(status_code=404, detail="No filing facts found for symbol.")
+    return ok(
+        [fact.model_dump() for fact in facts],
+        meta=ApiMeta(
+            source=provider.source,
+            data_version=provider.data_version,
+            warnings=warnings,
+        ),
+    )
+
+
+@router.post("/chart-reviews")
+async def create_chart_review(request: ChartReviewRequest):
+    review = filing_provider.create_chart_review(request)
+    return ok(
+        review.model_dump(),
+        meta=ApiMeta(
+            source="analysis-workbench",
+            data_version=filing_provider.data_version,
+            warnings=[],
+        ),
+    )
+
+
+@router.get("/chart-reviews/{symbol}")
+async def list_chart_reviews(symbol: str):
+    return ok(
+        [review.model_dump() for review in filing_provider.list_chart_reviews(symbol)],
+        meta=ApiMeta(
+            source="analysis-workbench",
+            data_version=filing_provider.data_version,
+            warnings=[],
+        ),
+    )
+
+
+@router.get("/internal-notes/{symbol}")
+async def list_internal_notes(symbol: str):
+    return ok(
+        [note.model_dump() for note in filing_provider.list_internal_notes(symbol)],
+        meta=ApiMeta(
+            source="internal-research",
+            data_version=filing_provider.data_version,
+            warnings=["Internal notes are research context and cannot override filing facts."],
+        ),
+    )
+
+
 @router.get("/{document_id}")
 async def get_document(document_id: str):
     record = document_store.get(document_id)
@@ -126,3 +233,20 @@ def _document_summary(record):
         "metric_candidate_count": len(record.metrics),
         "warnings": record.warnings,
     }
+
+
+def _active_filing_provider():
+    provider = get_filing_provider()
+    warnings = []
+    if provider.source.endswith("mock"):
+        warnings.append(
+            "Stage 3 uses a deterministic SEC mock provider until live fetch is enabled."
+        )
+    return provider, warnings
+
+
+def _fallback_filing_provider(exc: Exception):
+    settings = get_settings()
+    if not settings.sec_fallback_to_mock:
+        raise HTTPException(status_code=502, detail=f"Filing provider failed: {exc}") from exc
+    return filing_provider, [f"Live SEC provider failed; using mock fallback. Reason: {exc}"]
