@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  background: #f3f6f8;
+}
+
+body {
+  margin: 0;
+  color: #101828;
+  background: #f3f6f8;
+}
+
+* {
+  box-sizing: border-box;
+}

@@ -1,0 +1,1 @@
+"""QuantInsight backend application."""
