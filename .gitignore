@@ -1,0 +1,80 @@
+# 标准项目文档、规划文档和原型资产允许追踪。
+# 本文件只忽略本地环境、构建产物、缓存、日志、密钥、数据库和用户上传数据。
+
+# Node / frontend
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.turbo/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+htmlcov/
+.coverage
+
+# Local env and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Databases and generated storage
+*.sqlite
+*.sqlite3
+*.db
+data/
+storage/
+uploads/
+minio/
+
+# Logs and temp
+logs/
+*.log
+tmp/
+temp/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+AGENT_EXECUTION_PROTOCOL.md
+ARCHITECTURE_0_TO_1_REPORT.md
+CLAUDE.md
+diff.md
+implementation_plan.md
+notes.txt
+assets/product-mockups/01-layout-wireframe.svg
+assets/product-mockups/02-product-flow-wireframe.svg
+assets/product-mockups/03-dashboard-demo.svg
+assets/product-mockups/04-company-research-demo.svg
+assets/product-mockups/05-quant-backtest-demo.svg
+assets/product-mockups/v2-backtest-prototype.svg
+assets/product-mockups/v2-company-research-prototype.svg
+assets/product-mockups/v2-dashboard-prototype.svg
+assets/product-mockups/v2-filing-analysis-prototype.svg
+assets/product-mockups/v2-peer-comparison-prototype.svg
+doc/金融分析平台-01-研究方案报告.md
+doc/金融分析平台-02-概念设计与落地流程.md
+doc/金融分析平台-03-对标产品分析-Bloomberg.md
+doc/金融分析平台-04-设计系统与技术架构选型.md
+doc/金融分析平台-05-从零制作这类产品的概念流程与关键点.md
+doc/金融分析平台-06-普通用户使用说明与竞品原型参考.md
+doc/金融分析平台-07-产品原型升级标准与真实场景还原.md
+doc/金融分析平台-08-市场现实交付分析与友商优秀实践.md
+assets/product-mockups/v2-screener-prototype.svg
